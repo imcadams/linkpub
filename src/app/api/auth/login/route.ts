@@ -7,8 +7,9 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
+    // Find user by email
     const result = await pool.query(
-      'SELECT id, password_hash FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, username FROM users WHERE email = $1',
       [email]
     );
 
@@ -29,18 +30,33 @@ export async function POST(request: Request) {
       );
     }
 
+    // Generate token
     const token = generateToken(user.id);
-    
-    // Set HTTP-only cookie
-    cookies().set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+
+    // Create the response
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username
+      }
     });
 
-    return NextResponse.json({ success: true });
+    // Set the cookie
+    response.cookies.set({
+      name: 'token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
+
+    return response;
   } catch (error) {
+    console.error('Login error:', error);
     return NextResponse.json(
       { error: 'Server error' },
       { status: 500 }

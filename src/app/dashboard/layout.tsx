@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardLayout({
   children,
@@ -10,23 +10,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { profile, loading, error } = useProfile();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !profile) {
+    if (!loading && !user) {
       router.push('/login');
     }
-  }, [loading, profile, router]);
+  }, [loading, user, router]);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
-  if (!profile) {
+  if (!user) {
     return null;
   }
 

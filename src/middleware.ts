@@ -1,26 +1,22 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from './lib/auth';
 
-export async function middleware(request: NextRequest) {
-  // Protected API routes
-  if (request.nextUrl.pathname.startsWith('/api/links') ||
-      request.nextUrl.pathname.startsWith('/api/profile')) {
-    const token = request.cookies.get('token')?.value;
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('token');
 
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // If accessing dashboard without token, redirect to login
+  if (request.nextUrl.pathname.startsWith('/dashboard') && !token) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+  // If accessing login/register with token, redirect to dashboard
+  if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/links/:path*', '/api/profile/:path*'],
+  matcher: ['/dashboard/:path*', '/login', '/register']
 };

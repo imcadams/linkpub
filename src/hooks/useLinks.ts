@@ -15,12 +15,19 @@ export function useLinks() {
 
   const fetchLinks = async () => {
     try {
-      const response = await fetch('/api/links');
-      if (!response.ok) throw new Error('Failed to fetch links');
+      const response = await fetch('/api/links', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch links');
+      }
       const data = await response.json();
       setLinks(data);
+      setError(null);
     } catch (err) {
-      setError('Failed to load links');
+      console.error('Error fetching links:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load links');
     } finally {
       setLoading(false);
     }
@@ -28,15 +35,26 @@ export function useLinks() {
 
   const addLink = async (title: string, url: string) => {
     try {
+      console.log('Adding link:', { title, url }); // Debug log
       const response = await fetch('/api/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
         body: JSON.stringify({ title, url }),
       });
-      if (!response.ok) throw new Error('Failed to add link');
-      await fetchLinks();
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to add link');
+      }
+
+      await fetchLinks(); // Refresh the links list
+      return true;
     } catch (err) {
-      setError('Failed to add link');
+      console.error('Error adding link:', err); // Debug log
+      throw err;
     }
   };
 
@@ -44,13 +62,21 @@ export function useLinks() {
     try {
       const response = await fetch(`/api/links/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ title, url }),
       });
-      if (!response.ok) throw new Error('Failed to update link');
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update link');
+      }
+
       await fetchLinks();
     } catch (err) {
-      setError('Failed to update link');
+      console.error('Error updating link:', err);
+      throw err;
     }
   };
 
@@ -59,10 +85,16 @@ export function useLinks() {
       const response = await fetch(`/api/links/${id}`, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Failed to delete link');
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete link');
+      }
+
       await fetchLinks();
     } catch (err) {
-      setError('Failed to delete link');
+      console.error('Error deleting link:', err);
+      throw err;
     }
   };
 
@@ -70,13 +102,21 @@ export function useLinks() {
     try {
       const response = await fetch('/api/links/reorder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ linkIds }),
       });
-      if (!response.ok) throw new Error('Failed to reorder links');
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to reorder links');
+      }
+
       await fetchLinks();
     } catch (err) {
-      setError('Failed to reorder links');
+      console.error('Error reordering links:', err);
+      throw err;
     }
   };
 

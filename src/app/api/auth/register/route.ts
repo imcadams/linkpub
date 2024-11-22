@@ -14,21 +14,51 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashedPassword = await hashPassword(password);
-
-    const result = await pool.query(
-      'INSERT INTO users (email, password_hash, username) VALUES ($1, $2, $3) RETURNING id',
-      [email, hashedPassword, username]
-    );
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    if (error.constraint === 'users_email_key') {
+    // Test database connection
+    try {
+      await pool.query('SELECT NOW()');
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
       return NextResponse.json(
-        { error: 'Email already exists' },
-        { status: 400 }
+        { error: 'Database connection failed' },
+        { status: 500 }
       );
     }
+
+    const hashedPassword = await hashPassword(password);
+
+    try {
+      const result = await pool.query(
+        'INSERT INTO users (email, password_hash, username) VALUES ($1, $2, $3) RETURNING id',
+        [email, hashedPassword, username]
+      );
+
+      return NextResponse.json({ success: true });
+    } catch (queryError: any) {
+      console.error('Query error:', queryError);
+
+      if (queryError.code === '23505') { // unique violation
+        if (queryError.constraint === 'users_email_key') {
+          return NextResponse.json(
+            { error: 'Email already exists' },
+            { status: 400 }
+          );
+        }
+        if (queryError.constraint === 'users_username_key') {
+          return NextResponse.json(
+            { error: 'Username already exists' },
+            { status: 400 }
+          );
+        }
+      }
+
+      return NextResponse.json(
+        { error: 'Database error occurred' },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
     return NextResponse.json(
       { error: 'Server error' },
       { status: 500 }
